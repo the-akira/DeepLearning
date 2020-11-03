@@ -1,0 +1,13 @@
+# Referências
+
+- [Deep Learning](https://en.wikipedia.org/wiki/Deep_learning)
+- [Tensorflow Tutorials](https://www.tensorflow.org/tutorials)
+- [What is Deep Learning?](https://machinelearningmastery.com/what-is-deep-learning/)
+- [Intro to Deep Learning - Kaggle](https://www.kaggle.com/learn/intro-to-deep-learning)
+- [A Brief History of Neural Nets and Deep Learning](https://www.skynettoday.com/overviews/neural-net-history)
+- [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python)
+- [Deep Learning from Scratch](https://www.oreilly.com/library/view/deep-learning-from/9781492041405/)
+- [MIT 6.S191: Introduction to Deep Learning](https://www.youtube.com/playlist?list=PLtBw6njQRU-rwp5__7C0oIVt26ZgjG9NI)
+- [Deep Learning - NYU Center for Data Science](https://atcold.github.io/pytorch-Deep-Learning/)
+- [CS231n: Convolutional Neural Networks for Visual Recognition](http://cs231n.stanford.edu/)
+- [Machine Learning for Beginners: An Introduction to Neural Networks](https://victorzhou.com/blog/intro-to-neural-networks/)
