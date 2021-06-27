@@ -281,7 +281,7 @@ O artigo argumenta ainda que, da perspectiva da evolução, várias Transições
 
 ![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/Evolution.png)
 
-Linha do tempo esquemática de *Information and Replicators in the Biosphere*: "major evolutionary transitions" de Gillings et al. No processamento de informações.
+**Figura**: Linha do tempo esquemática de *Information and Replicators in the Biosphere*: "major evolutionary transitions" de Gillings et al. No processamento de informações.
 
 A informação digital criada por humanos atingiu uma magnitude semelhante à informação biológica na biosfera. Desde a década de 1980, a quantidade de informações digitais armazenadas dobrou a cada 2.5 anos, atingindo cerca de 5 zetabytes em 2014 (5×10^21 bytes).
 
