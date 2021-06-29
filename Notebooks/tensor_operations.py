@@ -22,7 +22,7 @@ def add(x, y):
     x = x.copy() # Evitar sobrescrever o Tensor de input
     for i in range(x.shape[0]):
         for j in range(x.shape[1]):
-        	x[i, j] += y[i, j]
+            x[i, j] += y[i, j]
     return x 
 
 a = np.array([[1,2,3],[6,7,8]])
@@ -84,7 +84,7 @@ def matrix_vector_dot(x, y):
     z = np.zeros(x.shape[0]) # Essa operação retorna um vetor de 0's com a mesma shape de y
     for i in range(x.shape[0]):
         for j in range(x.shape[1]):
-        	z[i] += x[i, j] * y[j]
+            z[i] += x[i, j] * y[j]
     return z
 
 print("Produto escalar M . N (Matriz . Vetor)")
