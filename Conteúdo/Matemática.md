@@ -25,7 +25,7 @@ x1 -> x1 * w1
 x2 -> x2 * x2
 ```
 
-2. **Verde**: Cada **entrada weighted** é adicionada com um **bias** **b**:
+2. **Verde**: Cada **entrada weighted** é adicionada, junto com um termo **bias** **b**:
 
 ```
 (x1 * w1) + (x2 * w2) + b
