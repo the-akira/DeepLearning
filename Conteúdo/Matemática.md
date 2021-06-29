@@ -450,4 +450,150 @@ Existem duas convenções para formatos de tensors de imagens: a convenção cha
 
 Os dados de vídeo são um dos poucos tipos de dados do mundo real para os quais você precisará de tensors 5D. Um vídeo pode ser entendido como uma sequência de frames (quadros), cada frame sendo uma imagem colorida. Como cada frame pode ser armazenado em um tensor 3D (altura, largura, color_depth), uma sequência de frames pode ser armazenada em um tensor 4D (frames, height, width, color_depth) e, portanto, um batch de diferentes vídeos pode ser armazenado em um tensor 5D de forma (amostras, frames, altura, largura, color_depth).
 
-Por exemplo, um clipe de vídeo do YouTube de **144×256** de 60 segundos com amostragem de 4 frames por segundo teria 240 frames. Um batch de quatro desses videoclipes seria armazenado em um tensor de forma **(4, 240, 144, 256, 3)**. Isso é um total de 106.168.320 valores! Se o **dtype** do tensor fosse float32, cada valor seria armazenado em 32 bits, de modo que o tensor representaria 405 MB. Os vídeos que você encontra na vida real são muito mais leves, porque não são armazenados em float32 e são normalmente compactados por um grande fator (como no formato **MPEG**).
+Por exemplo, um clipe de vídeo do YouTube de **144×256** de 60 segundos com amostragem de 4 frames por segundo teria 240 frames. Um batch de quatro desses videoclipes seria armazenado em um tensor de forma **(4, 240, 144, 256, 3)**. Isso é um total de 106.168.320 valores! Se o **dtype** do tensor fosse **float32**, cada valor seria armazenado em 32 bits, de modo que o tensor representaria 405 MB. Os vídeos que você encontra na vida real são muito mais leves, porque não são armazenados em **float32** e são normalmente compactados por um grande fator (como no formato **MPEG**).
+
+## As Engrenagens das Redes Neurais: Operações de Tensors
+
+Assim como qualquer programa de computador pode ser reduzido a um pequeno conjunto de operações binárias em entradas binárias (**AND**, **OR**, **NOR** e assim por diante), todas as transformações aprendidas por deep neural networks podem ser reduzidas a um punhado de operações de tensor aplicadas a tensors de dados numéricos. Por exemplo, é possível adicionar tensors, multiplicar tensors e assim por diante.
+
+Em nosso exemplo inicial, estávamos construindo nossa rede empilhando camadas densas (*Dense Layers*) umas sobre as outras. Uma instância da Keras layer se parece com isto:
+
+```python
+rede_neural.add(Dense(512, activation='relu'))
+```
+
+Essa camada pode ser interpretada como uma função, que recebe como entrada um tensor 2D e retorna outro tensor 2D - uma nova representação para o tensor de entrada. Especificamente, a função é a seguinte (onde **W** é um tensor 2D e **b** é um vetor, ambos atributos da camada):
+
+```python
+output = relu(dot(W, input) + b)
+```
+
+Perceba que temos três operações de tensor aqui: um produto escalar (**dot**) entre o tensor de entrada e um tensor denominado **W**; uma adição (**+**) entre o tensor 2D resultante e um vetor **b**; e, finalmente, uma operação **relu**: `relu(x)` é o mesmo que `max(x, 0)`.
+
+### Operações Element-Wise
+
+A operação **relu** e a **adição** são operações *element-wise*: operações que são aplicadas independentemente a cada entrada nos tensors sendo considerados. Isso significa que essas operações são altamente receptivas a implementações massivamente paralelas (implementações vetorizadas, um termo que vem da arquitetura do supercomputador de processador vetorial do período 1970-1990). Se você quiser escrever uma implementação Python ingênua de uma operação *element-wise*, use um loop **for**, como nesta implementação ingênua de uma operação **relu** *element-wise*:
+
+```python
+def relu(x):
+    assert len(x.shape) == 2 # x é um Tensor NumPy 2D
+
+    x = x.copy() # Evitar sobrescrever o Tensor de input
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            x[i, j] = max(x[i, j], 0)
+    return x
+
+x = np.array([[0.5,0.0,-3.0],[2.3,5.9,-1.3]])
+print(relu(x))
+```
+
+Fazemos o mesmo para adição:
+
+```python
+def add(x, y):
+    assert len(x.shape) == 2 # x e y são Tensors NumPy 2D
+    assert x.shape == y.shape
+
+    x = x.copy() # Evitar sobrescrever o Tensor de input
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            x[i, j] += y[i, j]
+    return x 
+
+a = np.array([[1,2,3],[6,7,8]])
+b = np.array([[4,5,9],[1,3,3]])
+c = add(a,b)
+print(c)
+```
+
+Seguindo o mesmo princípio, você pode fazer multiplicação, subtração e assim por diante.
+
+Na prática, ao lidar com arrays Numpy, essas operações estão disponíveis como funções Numpy integradas e bem otimizadas, que delegam o trabalho pesado a uma implementação de Basic Linear Algebra Subprograms (BLAS). BLAS são rotinas de manipulação de tensors eficientes, altamente paralelas e de baixo nível que são normalmente implementadas em Fortran ou C.
+
+Portanto, no Numpy, você pode fazer a seguinte operação *element-wise* e será extremamente rápido:
+
+```python
+print(np.maximum(x,0.0))
+d = a + b
+print(d)
+```
+
+### Broadcasting
+
+Nossa implementação ingênua anterior **add** suporta apenas a adição de tensors 2D com formas idênticas. Mas na *Dense Layer* introduzida anteriormente, adicionamos um tensor 2D com um vetor. O que acontece com a adição quando as formas dos dois tensors sendo adicionados diferem?
+
+Quando possível, e se não houver ambigüidade, o tensor menor será *broadcasted* para coincidir com a forma do tensor maior. *Broadcasting* consiste em duas etapas:
+
+- Os eixos (chamados *broadcast axes*) são adicionados ao tensor menor para corresponder ao **ndim** do tensor maior.
+- O tensor menor é repetido ao longo desses novos eixos para coincidir com a forma completa do tensor maior.
+
+Vejamos um exemplo concreto. Considere **X** com forma **(32, 10)** e **y** com forma **(10,)**. Primeiro, adicionamos um primeiro eixo vazio a **y**, cuja forma se torna **(1, 10)**. Em seguida, repetimos **y** 32 vezes ao longo desse novo eixo, de modo que terminamos com um tensor **Y** com forma **(32, 10)**, onde `Y[i,:] == y` para **i** no intervalo **(0, 32)**. Neste ponto, podemos prosseguir para adicionar **X** e **Y**, porque eles têm a mesma forma.
+
+Em termos de implementação, nenhum novo tensor 2D é criado, porque isso seria terrivelmente ineficiente. A operação de repetição é inteiramente virtual: ela acontece no nível algorítmico e não no nível da memória. Mas pensar no vetor sendo repetido 10 vezes ao longo de um novo eixo é um modelo mental útil. Esta é a aparência de uma implementação ingênua:
+
+```python
+def add_matrix_and_vector(x, y):
+    assert len(x.shape) == 2 # x é um Tensor NumPy 2D
+    assert len(y.shape) == 1 # y é um Vetor NumPy
+    assert x.shape[1] == y.shape[0]
+
+    x = x.copy() # Evitar sobrescrever o Tensor de input
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            x[i, j] += y[j]
+    return x 
+
+m = np.array([[8,4,9],[4,7,2]])
+n = np.array([1,2,3])
+print(add_matrix_and_vector(m,n))
+```
+
+Com broadcasting, você geralmente pode aplicar operações *element-wise* a dois tensors se um tensor tiver forma **(a, b, ... n, n + 1, ... m)** e o outro tiver forma **(n, n + 1, ... m)**. O broadcasting acontecerá automaticamente para os eixos de **a** até **n - 1**.
+
+O exemplo a seguir aplica a operação **maximum** *element-wise* a dois tensors de formas diferentes por meio de broadcasting:
+
+```python
+# X é um tensor aleatório com shape (64, 3, 32, 10)
+X = np.random.random((64, 3, 32, 10))
+# Y é um tensor aleatório com shape (32, 10) 
+Y = np.random.random((32, 10))
+# O output Z é um tensor com shape (32, 10)
+Z = np.maximum(X, Y)
+```
+
+### Tensor dot
+
+A operação **dot**, também chamada de produto de tensor (não deve ser confundida com um produto *element-wise*) é a operação de tensor mais comum e mais útil. Ao contrário das operações *element-wise*, ela combina entradas nos tensors de entrada.
+
+Um produto *element-wise* é feito com o operador `*` em Numpy, Keras, Theano e TensorFlow. A operação **dot** em NumPy é feita com o método **dot**:
+
+```python
+print(np.dot(m,n))
+```
+
+Em notação matemática, você notaria a operação com um ponto (`.`):
+
+```
+k = m . n
+```
+
+Matematicamente, o que a operação **dot** faz? Vamos começar com o produto escalar (*dot product*) de dois vetores. Ele é calculado da seguinte forma:
+
+```python
+def vector_dot(x, y):
+    assert len(x.shape) == 1 # x é um vetor NumPy
+    assert len(y.shape) == 1 # y é um vetor NumPy
+    assert x.shape[0] == y.shape[0]
+
+    z = 0 
+    for i in range(x.shape[0]):
+        z += x[i] * y[i]
+    return z
+
+p = np.array([1,2,3,4,5])
+q = np.array([3,4,7,8,9])
+print(vector_dot(p,q))
+```
+
+Você deve ter notado que o produto escalar entre dois vetores é um escalar e que apenas vetores com o mesmo número de elementos são compatíveis para um produto escalar.
