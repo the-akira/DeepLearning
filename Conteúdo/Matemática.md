@@ -578,7 +578,7 @@ Em notação matemática, você notaria a operação com um ponto (`.`):
 k = m . n
 ```
 
-Matematicamente, o que a operação **dot** faz? Vamos começar com o produto escalar (*dot product*) de dois vetores. Ele é calculado da seguinte forma:
+Matematicamente, o que a operação **dot** faz? Vamos começar com o produto escalar (*dot product*) de dois vetores **p** e **q**. Ele é calculado da seguinte forma:
 
 ```python
 def vector_dot(x, y):
@@ -597,3 +597,142 @@ print(vector_dot(p,q))
 ```
 
 Você deve ter notado que o produto escalar entre dois vetores é um escalar e que apenas vetores com o mesmo número de elementos são compatíveis para um produto escalar.
+
+Você também pode pegar o produto escalar entre uma matriz **x** e um vetor **y**, que retorna um vetor onde os coeficientes são os produtos escalares entre **y** e as linhas de **x**. Você o implementa da seguinte maneira:
+
+```python
+def matrix_vector_dot(x, y):
+    assert len(x.shape) == 2 # x é uma matriz NumPy
+    assert len(y.shape) == 1 # y é um vetor Numpy
+    assert x.shape[1] == y.shape[0] # A dimensão 1 de x deve ser a mesma da dimensão 0 de y
+
+    z = np.zeros(x.shape[0]) # Essa operação retorna um vetor de 0's com a mesma shape de y
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            z[i] += x[i, j] * y[j]
+    return z
+
+x = np.array([[8,4,9],[4,7,2]])
+y = np.array([1,2,3])
+print(matrix_vector_dot(x,y))
+```
+
+Você também pode reutilizar o código que escrevemos anteriormente, que destaca a relação entre um produto de vetor-matriz e um produto de vetor:
+
+```python
+def matriz_vetor_dot(x, y):
+    z = np.zeros(x.shape[0])
+    for i in range(x.shape[0]):
+        z[i] = vector_dot(x[i,:], y)
+    return z
+```
+
+Observe que, assim que um dos dois tensors tem uma **ndim** maior que 1, o **dot** não é mais simétrico, o que significa que o **dot(x, y)** não é o mesmo que o **dot(y, x)**.
+
+Obviamente, um produto escalar generaliza para tensors com um número arbitrário de eixos. As aplicações mais comuns podem ser o produto escalar entre duas matrizes. Você pode obter o produto escalar de duas matrizes **x** e **y** (**dot(x, y)**) se e somente se `x.shape[1] == y.shape[0]`. O resultado é uma matriz com forma (`x.shape[0], y.shape[1]`), onde os coeficientes são os produtos do vetor entre as linhas de **x** e as colunas de **y**. Aqui está a implementação ingênua:
+
+```python
+def matrix_dot(x, y):
+    assert len(x.shape) == 2 # x é uma matriz NumPy
+    assert len(y.shape) == 2 # y é uma matriz NumPy
+    assert x.shape[1] == y.shape[0] # A dimensão 1 de x deve ser a mesma dimensão 0 de y
+
+    z = np.zeros((x.shape[0], y.shape[1])) # Essa operação retorna uma matriz de 0's com uma shape específica
+    for i in range(x.shape[0]):
+        for j in range(y.shape[1]):
+            row_x = x[i, :]
+            column_y = y[:, j]
+            z[i, j] = vector_dot(row_x, column_y)
+    return z
+
+x = np.array([[1,2,3],[6,7,8],[4,2,1]])
+y = np.array([[4,5,7],[5,2,1],[9,4,3]])
+z = matrix_dot(A,B)
+print(z)
+```
+
+Para entender a compatibilidade da forma (*shape*) do produto escalar (*dot product*), ajuda a visualizar os tensors de entrada e saída alinhando-os conforme mostrado na figura a seguir:
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/MatrixDotProduct.png)
+
+**x**, **y** e **z** são representados como retângulos (caixas de coeficientes). Como as linhas de **x** e as colunas de **y** devem ter o mesmo tamanho, segue-se que a largura de **x** deve corresponder à altura de **y**.
+
+De forma mais geral, você pode pegar o produto escalar entre tensors de dimensões superiores, seguindo as mesmas regras de compatibilidade de forma descritas anteriormente para o caso 2D:
+
+```
+(a, b, c, d) . (d,) -> (a, b, c)
+
+(a, b, c, d) . (d, e) -> (a, b, c, e)
+```
+
+E assim por diante.
+
+### Tensor Reshaping
+
+Um terceiro tipo de operação de tensor que é essencial entender é a remodelagem (*reshaping*) do tensor. Embora não tenha sido usado nas *Dense layers* em nosso primeiro exemplo de rede neural, nós o usamos quando pré-processamos os dados de dígitos antes de alimentá-los em nossa rede:
+
+```python
+train_images = train_images.reshape((60000, 28 * 28))
+```
+
+Reshaping de um tensor significa reorganizar suas linhas e colunas para corresponder a uma forma de destino. Naturalmente, o tensor remodelado tem o mesmo número total de coeficientes que o tensor inicial. Reshaping é melhor compreendida por meio de exemplos simples:
+
+```python
+x = np.array([[0.3, 1.3],[2.0, 3.0], [4.1, 7.2]])
+print(x)
+# [[0.3 1.3]
+#  [2.  3. ]
+#  [4.1 7.2]]
+print(x.shape) # (3, 2)
+print(x.reshape((6,1)))
+# [[0.3]
+#  [1.3]
+#  [2. ]
+#  [3. ]
+#  [4.1]
+#  [7.2]]
+print(x.reshape((2,3)))
+# [[0.3 1.3 2. ]
+#  [3.  4.1 7.2]]
+print(x.flatten()) # [0.3 1.3 2.  3.  4.1 7.2]
+```
+
+Um caso especial de reshaping comumente encontrado é a **transposição**. Transpor uma matriz significa trocar suas linhas e colunas, de modo que `x[i,:]` se torne `x[:, i]`:
+
+```python
+# Criando uma Matriz de apenas zeros de shape (300,20)
+z = np.zeros((300,20))
+# O método tranpose inverte as linhas e colunas
+z = np.transpose(z)
+print(z.shape) # (20, 300)
+```
+
+### Interpretação Geométrica das Operações de Tensors
+
+Como o conteúdo dos tensors manipulados por operações de tensor pode ser interpretado como coordenadas de pontos em algum espaço geométrico, todas as operações de tensor têm uma interpretação geométrica. Por exemplo, vamos considerar a adição. Começaremos com o seguinte vetor:
+
+```
+A = (0.5, 1)
+```
+
+Ele é um ponto em um espaço 2D, é comum imaginar um vetor como uma seta ligando a origem ao ponto, como mostrado na figura a seguir:
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/GeometricInterpretationTensors.png)
+
+Vamos considerar um novo ponto, `B = (1, 0,25)`, que adicionaremos ao anterior. Isso é feito geometricamente encadeando as setas do vetor, com a localização resultante sendo o vetor que representa a soma dos dois vetores anteriores, como ilustrado na figura a seguir:
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/VecSum.png)
+
+Em geral, as operações geométricas elementares, como *affine transformations*, rotações, dimensionamento e assim por diante, podem ser expressas como operações de tensor. Por exemplo, uma rotação de um vetor 2D por um ângulo **teta** pode ser alcançada por meio de um produto escalar com uma matriz **2×2** `R = [u, v]`, onde **u** e **v** são ambos vetores do plano: `u = [cos(theta), sin(theta)]` e `v = [-sin(theta), cos(theta)]`.
+
+### Interpretação Geométrica de Deep Learning
+
+Aprendemos que as redes neurais consistem inteiramente em cadeias de operações de tensor e que todas essas operações de tensor são apenas transformações geométricas dos dados de entrada. Conclui-se que você pode interpretar uma rede neural como uma transformação geométrica muito complexa em um espaço de alta dimensão, implementada por meio de uma longa série de etapas simples.
+
+Em 3D, a seguinte imagem mental pode ser útil. Imagine duas folhas de papel colorido: uma vermelha e outra azul. Coloque um em cima do outro. Agora amasse-os juntos em uma pequena bola. Essa bola de papel amassada são seus dados de entrada, e cada folha de papel é uma classe de dados em um problema de classificação. O que uma rede neural (ou qualquer outro modelo de machine learning) deve fazer é descobrir uma transformação da bola de papel que a desamassaria, de modo a tornar as duas classes novamente separáveis de forma limpa. Com o deep learning, isso seria implementado como uma série de transformações simples do espaço 3D, como aquelas que você poderia aplicar na bola de papel com os dedos, um movimento de cada vez.
+
+A figura a seguir mostra o processo como o ato de desempacotar uma variedade complicada de dados:
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/GeometricDeepLearning.png)
+
+Neste ponto, você deve ter uma boa intuição de por que o deep learning se destaca nisso: ele adota a abordagem de decompor incrementalmente uma transformação geométrica complicada em uma longa cadeia de elementos elementares. Cada camada em uma deep network aplica uma transformação que desemaranha um pouco os dados - e uma pilha profunda de camadas (*deep stack of layers*) torna tratável/possível um processo de desemaranhamento extremamente complicado.
