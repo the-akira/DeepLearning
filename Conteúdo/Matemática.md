@@ -647,7 +647,7 @@ def matrix_dot(x, y):
 
 x = np.array([[1,2,3],[6,7,8],[4,2,1]])
 y = np.array([[4,5,7],[5,2,1],[9,4,3]])
-z = matrix_dot(A,B)
+z = matrix_dot(x,y)
 print(z)
 ```
 
@@ -736,3 +736,210 @@ A figura a seguir mostra o processo como o ato de desempacotar uma variedade com
 ![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/GeometricDeepLearning.png)
 
 Neste ponto, você deve ter uma boa intuição de por que o deep learning se destaca nisso: ele adota a abordagem de decompor incrementalmente uma transformação geométrica complicada em uma longa cadeia de elementos elementares. Cada camada em uma deep network aplica uma transformação que desemaranha um pouco os dados - e uma pilha profunda de camadas (*deep stack of layers*) torna tratável/possível um processo de desemaranhamento extremamente complicado.
+
+## O Motor das Redes Neurais: Otimização baseada em Gradiente
+
+Como vimos anteriormente, cada camada neural de nosso exemplo de rede neural transforma seus dados de entrada da seguinte maneira:
+
+```python
+output = relu(dot(W, input) + b)
+```
+
+Nesta expressão, **W** e **b** são tensors que são atributos da camada. Eles são chamados de *weights* ou parâmetros treináveis da camada (os atributos kernel e bias, respectivamente). Esses *weights* contêm as informações aprendidas pela rede a partir da exposição aos dados de treinamento.
+
+Inicialmente, essas matrizes de *weights* são preenchidas com pequenos valores aleatórios (uma etapa chamada inicialização aleatória). Claro, não há razão para esperar que `relu(dot(W, input) + b)`, quando **W** e **b** são aleatórios, irá produzir quaisquer representações úteis. As representações resultantes não têm sentido, mas são um ponto de partida. O que vem a seguir é ajustar gradualmente esses *weights*, com base em um sinal de feedback. Esse ajuste gradual, também chamado de **treinamento**, é basicamente o aprendizado de que se trata o machine learning.
+
+Isso acontece dentro do que é chamado de loop de treinamento, que funciona da seguinte maneira. Repita essas etapas em um loop, enquanto for necessário:
+
+1. Colete um **batch** de amostras de treinamento **x** e alvos (*targets*) correspondentes **y**.
+2. Execute a rede neural em **x** (uma etapa chamada *forward pass*) para obter previsões **y_pred**.
+3. Calcule a Loss da rede neural no batch, uma medida da incompatibilidade entre **y_pred** e **y**.
+4. Atualize todos os *weights* da rede neural de forma a reduzir um pouco a Loss neste batch.
+
+Você acabará ficando com uma rede neural que tem uma Loss muito baixa em seus dados de treinamento: uma baixa incompatibilidade entre as previsões **y_pred** e os alvos esperados **y**. A rede “aprendeu” a mapear suas entradas para os alvos corretos. De longe, pode parecer mágica, mas quando você o reduz a etapas elementares, torna-se simples.
+
+A etapa 1 parece fácil - apenas código I/O (Input/Output). As etapas 2 e 3 são apenas a aplicação de um punhado de operações de tensor. A parte difícil é a etapa 4: atualizar os *weights* da rede neural. Dado um coeficiente *weight* individual na rede, como você pode calcular se o coeficiente deve ser aumentado ou diminuído e em quanto?
+
+Uma solução ingênua seria congelar todos os *weights* na rede, exceto o coeficiente escalar que está sendo considerado, e tentar valores diferentes para esse coeficiente. Digamos que o valor inicial do coeficiente seja **0.3**. Após o encaminhamento de um batch de dados, a Loss da rede no batch é de **0.5**. Se você alterar o valor do coeficiente para **0.35** e executar novamente o *forward pass*, a Loss aumenta para **0.6**. Mas se você diminuir o coeficiente para **0.25**, a Loss cai para **0.4**. Nesse caso, parece que atualizar o coeficiente em **-0.05** contribuiria para minimizar a Loss. Isso teria que ser repetido para todos os coeficientes da rede.
+
+Mas tal abordagem seria terrivelmente ineficiente, porque você precisaria calcular dois *forward passes* (que são custosos) para cada coeficiente individual (dos quais existem muitos, geralmente milhares e às vezes até milhões). Uma abordagem muito melhor é aproveitar o fato de que todas as operações usadas na rede são **diferenciáveis** e calcular o gradiente da Loss em relação aos coeficientes da rede. Você pode então mover os coeficientes na direção oposta do gradiente, diminuindo assim a Loss.
+
+### O que é uma Derivada?
+
+Considere uma função contínua e suave `f(x) = y`, mapeando um número real **x** para um novo número real **y**. Como a função é contínua, uma pequena mudança em **x** só pode resultar em uma pequena mudança em **y** - essa é a intuição por trás da continuidade. Digamos que você aumente **x** por um pequeno fator **epsilon_x**: isso resulta em uma pequena mudança **epsilon_y** para **y**:
+
+```
+f(x + epsilon_x) = y + epsilon_y
+```
+
+Além disso, como a função é suave (sua curva não tem ângulos abruptos), quando **epsilon_x** é pequeno o suficiente, em torno de um certo ponto **p**, é possível aproximar **f** como uma função linear da inclinação **a**, de modo que **epsilon_y** se torne `a * epsilon_x`:
+
+```
+f(x + epsilon_x) = y + a * epsilon_x
+```
+
+Obviamente, essa aproximação linear só é válida quando **x** está próximo o suficiente de **p**.
+
+A inclinação **a** é chamada de derivada de **f** em **p**. Se **a** for negativo, significa que uma pequena mudança de **x** em torno de **p** resultará em uma diminuição de `f(x)`; e se **a** for positivo, uma pequena mudança em **x** resultará em um aumento de `f(x)`. Além disso, o valor absoluto de **a** (a magnitude da derivada) informa a rapidez com que esse aumento ou diminuição acontecerá.
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/Derivative.png)
+
+Para cada função diferenciável `f(x)` (diferenciável significa "pode ser derivada": por exemplo, funções suaves e contínuas podem ser derivadas), existe uma função derivada `f'(x)` que mapeia valores de **x** para a inclinação da aproximação linear local de **f** nesses pontos. Por exemplo, a derivada de `cos(x)` é `-sin(x)`, a derivada de `f(x) = a * x` é `f'(x) = a`, e assim por diante.
+
+Se você está tentando atualizar **x** por um fator **epsilon_x** a fim de minimizar `f(x)`, e você sabe a derivada de **f**, então seu trabalho está feito: a derivada descreve completamente como `f(x)` evolui conforme você muda **x**. Se você quiser reduzir o valor de `f(x)`, você só precisa mover **x** um pouco na direção oposta da derivada.
+
+### Derivada de uma Operação de Tensor: o Gradiente
+
+Um **gradiente** é a derivada de uma operação de tensor. É a generalização do conceito de derivadas para funções de entradas multidimensionais: isto é, para funções que tomam tensors como entradas.
+
+Considere um vetor de entrada **x**, uma matriz **W**, um alvo **y** e uma função Loss **loss**. Você pode usar **W** para calcular um alvo **y_pred** candidato e calcular a loss, ou incompatibilidade, entre o candidato alvo **y_pred** e o alvo **y**:
+
+```
+y_pred = dot(W, x)
+loss_value = loss(y_pred, y)
+```
+
+Se as entradas de dados **x** e **y** estiverem congeladas, isso pode ser interpretado como uma função de mapeamento de valores de **W** para valores loss:
+
+```
+loss_value = f(W)
+```
+
+Digamos que o valor atual de **W** seja **W0**. Então, a derivada de **f** no ponto **W0** é um gradiente tensorial `(f)(W0)` com a mesma forma de **W**, onde cada gradiente de coeficiente `(f)(W0)[i, j]` indica a direção e magnitude da mudança em **loss_value** que você observa ao modificar `W0[i, j]`. Esse gradiente tensorial `(f)(W0)` é o gradiente da função `f(W) = loss_value` em **W0**.
+
+Você viu anteriormente que a derivada de uma função `f(x)` de um único coeficiente pode ser interpretada como a inclinação da curva de **f**. Da mesma forma, gradiente `(f)(W0)` pode ser interpretado como o tensor que descreve a curvatura de `f(W)` em torno de **W0**.
+
+Por esta razão, da mesma forma que, para uma função `f(x)`, você pode reduzir o valor de `f(x)` movendo **x** um pouco na direção oposta da derivada, com uma função `f(W)` de um tensor, você pode reduzir `f(W)` movendo **W** na direção oposta do gradiente: por exemplo, `W1 = W0 - step * gradiente(f)(W0)` (onde **step** é um pequeno fator de escala). Isso significa ir contra a curvatura, o que intuitivamente deve colocá-lo mais abaixo na curva. Observe que a etapa do fator de escala é necessária porque o `gradiente(f)(W0)` só se aproxima da curvatura quando você está perto de **W0**, então você não quer se afastar muito de **W0**.
+
+### Stochastic Gradient Descent
+
+Dada uma função diferenciável, é teoricamente possível encontrar seu mínimo analiticamente: sabe-se que o mínimo de uma função é um ponto onde a derivada é **0**, então tudo que você precisa fazer é encontrar todos os pontos onde a derivada vai a **0** e verificar quais desses pontos, a função tem o valor mais baixo.
+
+Aplicado a uma rede neural, isso significa encontrar analiticamente a combinação de valores de *weight* que produz a menor função Loss possível. Isso pode ser feito resolvendo a equação `gradiente(f)(W) = 0` para **W**. Esta é uma equação polinomial de **N** variáveis, onde **N** é o número de coeficientes na rede. Embora seja possível resolver tal equação para `N = 2` ou `N = 3`, entretanto, fazê-lo é intratável para redes neurais reais, onde o número de parâmetros nunca é inferior a alguns milhares e pode muitas vezes ser várias dezenas de milhões.
+
+Em vez disso, você pode usar o algoritmo de quatro etapas descrito anteriormente: modifique os parâmetros aos poucos com base no **valor loss** atual em um batch aleatório de dados. Por estar lidando com uma função diferenciável, você pode calcular seu gradiente, o que oferece uma maneira eficiente de implementar a etapa 4. Se você atualizar os *weights* na direção oposta do gradiente, a loss será um pouco menor a cada vez:
+
+1. Colete um batch de amostras de treinamento **x** e alvos correspondentes **y**.
+2. Execute a rede neural em **x** para obter previsões **y_pred**.
+3. Calcule a Loss da rede neural no batch, uma medida da incompatibilidade entre **y_pred** e **y**.
+4. Calcule o gradiente da Loss em relação aos parâmetros da rede (um *backward pass*).
+5. Mova os parâmetros um pouco na direção oposta do gradiente - por exemplo `W -= gradiente * step` - reduzindo um pouco a Loss no batch.
+
+O que foi descrito acima é chamado de **mini-batch stochastic gradient descent** (mini-batch SGD). O termo estocástico se refere ao fato de que cada batch de dados é coletado aleatoriamente (estocástico é um sinônimo científico de aleatório). A figura a seguir ilustra o que acontece em 1 Dimensão, quando a rede neural tem apenas um parâmetro e você tem apenas uma amostra de treinamento.
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/SGD.png)
+
+Como você pode ver, intuitivamente, é importante escolher um valor razoável para o fator de **step** (Descrito na figura em português como **Passo**). Se for muito pequeno, a descida da curva levará muitas iterações e pode ficar presa em um mínimo local. Se **step** for muito grande, suas atualizações podem acabar levando você a locais completamente aleatórios na curva.
+
+Observe que uma variante do algoritmo **mini-batch SGD** seria coletar uma única amostra e ter como alvo cada iteração, em vez de coletar um batch de dados. Isso seria o verdadeiro SGD (em oposição ao mini-batch SGD). Alternativamente, indo para o extremo oposto, você poderia executar todas as etapas em todos os dados disponíveis, o que é chamado de **batch SGD**. Cada atualização seria então mais precisa, mas muito mais custosa. O meio-termo eficiente entre esses dois extremos é usar mini-batches de tamanho razoável.
+
+Embora a figura apresentada anteriormente ilustre o *gradient descent* em um espaço de parâmetro 1D, na prática você usará o *gradient descent* em espaços altamente dimensionais: cada coeficiente de *weight* em uma rede neural é uma dimensão livre no espaço, e pode haver dezenas de milhares ou até milhões deles. Para ajudá-lo a construir uma intuição sobre as superfícies de Loss, você também pode visualizar o *gradient descent* ao longo de uma superfície de Loss 2D, conforme mostrado na figura a seguir. 
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/GradientDescent3D.png)
+
+Mas você não pode visualizar como é o processo real de treinamento de uma rede neural - você não pode representar um espaço dimensional de 1.000.000 de uma forma que faça sentido para os humanos. Como tal, é bom ter em mente que as intuições que você desenvolve por meio dessas representações de baixa dimensão podem nem sempre ser precisas na prática. Isso tem sido historicamente uma fonte de problemas no mundo da pesquisa de deep learning.
+
+Além disso, existem várias variantes de SGD que diferem levando em consideração as atualizações de *weight* anteriores ao calcular a próxima atualização de *weight*, em vez de apenas olhar para o valor atual dos gradientes. Existem, por exemplo, SGD com **momentum**, assim como **Adagrad**, **RMSProp** e vários outros. Essas variantes são conhecidas como **métodos de otimização** ou **otimizadores**. Em particular, o conceito de momentum, que é usado em muitas dessas variantes, merece sua atenção. Momentum aborda dois problemas com SGD: velocidade de convergência e mínimos locais. Considere a figura a seguir, que mostra a curva de uma loss como uma função de um parâmetro de rede neural.
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/GradientDescent.png)
+
+Como você pode ver, em torno de um determinado valor de parâmetro, existe um mínimo local: em torno desse ponto, mover para a esquerda resultaria no aumento da Loss, mas o mesmo aconteceria ao mover para a direita. Se o parâmetro em consideração estivesse sendo otimizado via SGD com uma pequena taxa de aprendizado (**learning rate**), o processo de otimização ficaria preso no mínimo local em vez de seguir para o mínimo global.
+
+Você pode evitar esses problemas usando o **momentum**, que se inspira na física. Uma imagem mental útil aqui é pensar no processo de otimização como uma pequena bola rolando pela curva Loss. Se tiver impulso suficiente, a bola não ficará presa em um vale e terminará no mínimo global. Momentum é implementado movendo
+a bola em cada etapa com base não apenas no valor de inclinação atual (aceleração atual), mas também na velocidade atual (resultante da aceleração anterior). Na prática, isso significa atualizar o parâmetro **w** com base não apenas no valor do gradiente atual, mas também na atualização anterior do parâmetro, como nesta implementação ingênua:
+
+```python
+velocidade_antiga = 0.0
+momentum = 0.1 # Fator de momentum constante
+
+# Loop de otimização
+while loss > 0.01:
+    w, loss, gradient = obter_parametros_atuais()
+    velocidade = velocidade_antiga * momentum + learning_rate * gradient
+    w = w + momentum * velocidade - learning_rate * gradient
+    velocidade_antiga = velocidade
+    atualizar_parametro(w)
+```
+
+### Encadeando Derivadas: O Algoritmo Backpropagation
+
+No algoritmo anterior, assumimos casualmente que, como uma função é diferenciável, podemos calcular explicitamente sua derivada. Na prática, uma função de rede neural consiste em muitas operações de tensor encadeadas, cada uma com uma derivada simples e conhecida. Por exemplo, esta é uma rede neural **f** composta de três operações de tensor, **a**, **b** e **c**, com as matrizes de *weight* **W1**, **W2** e **W3**:
+
+```
+f(W1, W2, W3) = a(W1, b(W2, c(W3)))
+```
+
+O cálculo nos diz que tal cadeia de funções pode ser derivada usando a seguinte identidade, chamada regra da cadeia: `f(g(x)) = f'(g(x)) * g'(x)`. 
+
+A aplicação da regra da cadeia ao cálculo dos valores de gradiente de uma rede neural dá origem a um algoritmo chamado **Backpropagation** (também chamado de diferenciação de modo reverso). O backpropagation começa com o valor loss final e retrocede das camadas superiores para as inferiores, aplicando a regra da cadeia para calcular a contribuição de cada parâmetro teve no valor loss.
+
+Hoje em dia, e nos próximos anos, as pessoas implementarão redes em estruturas modernas que são capazes de diferenciação simbólica, como o **Tensorflow**. Isso significa que, dada uma cadeia de operações com uma derivada conhecida, eles podem calcular uma função gradiente para a cadeia (aplicando a regra da cadeia) que mapeia valores de parâmetro de rede para valores de gradiente. Quando você tem acesso a tal função, a *backward pass* é reduzida a uma chamada para esta função gradiente. Graças à diferenciação simbólica, você nunca terá que implementar o algoritmo backpropagation manualmente. 
+
+A figura a seguir apresenta um simples exemplo do algoritmo backpropagation, onde uma função é definida em etapas como um grafo computacional e cada derivada parcial é calculada para sabermos como ajustar os *weights* adequadamente.
+
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/Backpropagation.png)
+
+## Revisitando a Rede Neural de Classificação de Dígitos MNIST
+
+Vamos voltar ao nosso exemplo e revisar cada parte dele individualmente. Primeiramente, esses são os dados de entrada:
+
+```python
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+
+train_images = train_images.reshape((60000, 28 * 28))
+train_images = train_images.astype('float32') / 255
+test_images = test_images.reshape((10000, 28 * 28))
+test_images = test_images.astype('float32') / 255
+```
+
+Agora você entende que as imagens de entrada são armazenadas em tensors Numpy, que são formatados aqui como tensors **float32** de forma **(60000, 784)** (dados de treinamento) e **(10000, 784)** (dados de teste), respectivamente. Essa é a rede neural:
+
+```python
+rede_neural = Sequential()
+rede_neural.add(Dense(512, activation='relu', input_shape=(28 * 28,)))
+rede_neural.add(Dense(10, activation='softmax'))
+```
+
+Agora você entende que essa rede neural consiste em uma cadeia de duas camadas Densas, que cada camada aplica algumas operações de tensor simples aos dados de entrada e que essas operações envolvem tensors de *weight*. Os tensors de *weight*, que são atributos das camadas, são onde o conhecimento da rede neural persiste. Esta foi a etapa de compilação da rede:
+
+```python
+rede_neural.compile(optimizer='adam',loss='categorical_crossentropy',metrics=['accuracy'])
+```
+
+Agora você entende que **categorical_crossentropy** é a função Loss que é usada como um sinal de feedback para aprender os tensors de *weight*, e que a fase de treinamento tentará minimizar. Você também sabe que essa redução da Loss ocorre por meio de **mini-batch stochastic gradient descent**. As regras exatas que governam um uso específico de *gradient descent* são definidas pelo otimizador **adam** passado como o primeiro argumento. Finalmente, este foi o loop de treinamento:
+
+```python
+rede_neural.fit(train_images, train_labels, epochs=5, batch_size=128)
+```
+
+Agora você entende o que acontece quando você chama o **fit**: a rede neural começará a iterar nos dados de treinamento em mini-batches de 128 amostras, 5 vezes (cada iteração em todos os dados de treinamento é chamada de **epoch**). A cada iteração, a rede calculará os gradientes dos *weights* em relação à Loss no batch e atualizará os *weights* de acordo. Após essas 5 epochs, a rede terá realizado 2.345 atualizações de gradiente (469 por epoch), e a Loss da rede será suficientemente baixa para que a rede seja capaz de classificar dígitos manuscritos com alta precisão.
+
+Finalmente, podemos utilizar a nossa rede neural para realizar previsões. Vamos selecionar uma amostra aleatória de nosso conjunto de testes e ver se conseguimos fazer a previsão correta:
+
+```python
+idx = np.random.randint(0,40)
+número = test_images[idx]
+print(f'Valor correto: {np.argmax(test_labels[idx], axis=-1)}')
+previsão = np.argmax(rede_neural.predict(número.reshape(1, 28 * 28)), axis=-1)
+print(f'Valor previsto: {previsão[0]}')
+# Valor correto: 7
+# Valor previsto: 7
+```
+
+Como podemos observar, a rede é capaz de prever com sucesso, tendo uma **accuracy** de teste de 98%.
+
+## Sumarizando
+
+- Aprender significa encontrar uma combinação de parâmetros do modelo que minimiza uma função Loss para um determinado conjunto de amostras de dados de treinamento e seus alvos correspondentes.
+- O aprendizado acontece coletando batches aleatórios de amostras de dados e seus alvos, e computando o gradiente dos parâmetros de rede em relação à Loss no batch. Os parâmetros de rede são movidos um pouco (a magnitude do movimento é definida pela taxa de aprendizagem) na direção oposta do gradiente.
+- Todo o processo de aprendizagem é possibilitado pelo fato de que as redes neurais são cadeias de operações de tensors diferenciáveis e, portanto, é possível aplicar a regra da cadeia de derivação para encontrar a função de gradiente que mapeia os parâmetros atuais e o batch atual de dados para um valor de gradiente.
+- Dois conceitos-chave que você verá com frequência em redes neurais são **loss** e **otimizadores**. Esses são os dois elementos que você precisa definir antes de começar a alimentar dados em uma rede neural.
+- A loss é a quantidade que você tentará minimizar durante o treinamento, portanto, deve representar uma medida de sucesso para a tarefa que você está tentando resolver.
+- O otimizador especifica a maneira exata em que o gradiente da Loss será usado para atualizar os parâmetros: por exemplo, pode ser o otimizador **RMSProp**, **SGD com momentum** e assim por diante.
+
+## Referências
+
+Visite as referências para mais detalhes:
+
+- [An Introduction to Neural Networks](https://victorzhou.com/blog/intro-to-neural-networks/)
+- [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python)
