@@ -10,7 +10,7 @@ A ilustração a seguir apresenta o neurônio artificial e seus diferentes compo
 
 ![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/Neuron.png)
 
-Como podemos observar, um neurônio basicamente pega **entradas**, faz algumas cálculos com elas e produz uma **saída**.
+Como podemos observar, um neurônio basicamente pega **entradas**, faz alguns cálculos com elas e produz uma **saída**.
 
 A seguir temos um exemplo de um neurônio com apenas duas entradas:
 
