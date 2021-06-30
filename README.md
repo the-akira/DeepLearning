@@ -12,3 +12,4 @@ Estudos e Experimentos sobre Deep Learning.
 - [Dropout e Batch Normalization](https://github.com/the-akira/DeepLearning/blob/master/Notebooks/DropoutBatchNormalization.ipynb)
 - [Classificação de Múltiplas Classes](https://github.com/the-akira/DeepLearning/blob/master/Notebooks/MulticlassClassification.ipynb)
 - [Classificação Binária](https://github.com/the-akira/DeepLearning/blob/master/Notebooks/BinaryClassification.ipynb)
+- [Referências](https://github.com/the-akira/DeepLearning/blob/master/Conte%C3%BAdo/Refer%C3%AAncias.md)
