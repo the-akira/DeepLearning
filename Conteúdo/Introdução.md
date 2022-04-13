@@ -159,7 +159,7 @@ A primeira aplicação prática bem-sucedida de redes neurais veio em 1989 da Be
 
 Os SVMs visam resolver problemas de classificação encontrando *decision boundaries* entre dois conjuntos de pontos pertencentes a duas categorias diferentes. Um *decision boundary* pode ser considerado como uma linha ou superfície que separa seus dados de treinamento em dois espaços correspondentes a duas categorias. Para classificar novos pontos de dados, você só precisa verificar de que lado do *decision boundary* eles caem.
 
-![img](https://github.com/the-akira/DeepLearning/blob/master/Imagens/DecisionBoundary.png)
+![img](https://raw.githubusercontent.com/the-akira/DeepLearning/master/Imagens/DecisionBoundary.png)
 
 Os SVMs procuram encontrar esses limites em duas etapas:
 
